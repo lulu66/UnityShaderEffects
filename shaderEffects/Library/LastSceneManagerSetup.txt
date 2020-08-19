@@ -1,4 +1,4 @@
 sceneSetups:
-- path: Assets/ParallexMap/ParallexMap.unity
+- path: Assets/GrassAndFlower/grassOrflowers.unity
   isLoaded: 1
   isActive: 1

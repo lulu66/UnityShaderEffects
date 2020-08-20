@@ -16,7 +16,6 @@ public class EsTools_GrassGenerateTools : EditorWindow
 
     private float MinSize = 0.5f;
     private float MaxSize = 0.5f;
-    private bool EnableRandomSize;
 
     private GameObject GrassPropPrefab;
 
@@ -56,6 +55,16 @@ public class EsTools_GrassGenerateTools : EditorWindow
         }
     }
 
+    void SetGrassTransform(GameObject grassInstance, Vector3 pos, RaycastHit hit)
+    {
+        grassInstance.transform.parent = GrassRoot;
+        grassInstance.transform.position = pos + hit.point;
+        grassInstance.transform.localScale = Random.Range(MinSize, MaxSize) * Vector3.one;
+        grassInstance.transform.rotation = Quaternion.AngleAxis(Random.Range(0, 360f), Vector3.up) * grassInstance.transform.rotation;
+
+        grassInstance.gameObject.SetActive(true);
+        GrassInstances.Add(grassInstance);
+    }
     //以点击点为圆心生成草
     void GenerateInCircle(RaycastHit hit)
     {
@@ -75,13 +84,7 @@ public class EsTools_GrassGenerateTools : EditorWindow
                 {
                     grassInstance = GameObject.Instantiate<GameObject>(Grass2Prefab);
                 }
-                grassInstance.transform.parent = GrassRoot;
-                grassInstance.transform.position = pos + hit.point;
-                grassInstance.transform.localScale = Random.Range(MinSize, MaxSize) * Vector3.one;
-                grassInstance.transform.localRotation = Quaternion.AngleAxis(Random.Range(0, 360f), Vector3.up);
-                grassInstance.transform.up = Vector3.up;
-                grassInstance.gameObject.SetActive(true);
-                GrassInstances.Add(grassInstance);
+                SetGrassTransform(grassInstance, pos, hit);
                 //mGrassInstancing.DrawInstancedProp(grassInstance);
             }
         }
@@ -101,13 +104,7 @@ public class EsTools_GrassGenerateTools : EditorWindow
         {
             grassInstance = GameObject.Instantiate<GameObject>(Grass2Prefab);
         }
-        grassInstance.transform.parent = GrassRoot;
-        grassInstance.transform.position = hit.point;
-        grassInstance.transform.localScale = Random.Range(MinSize, MaxSize) * Vector3.one;
-        grassInstance.transform.localRotation = Quaternion.AngleAxis(Random.Range(0, 360f), Vector3.up);
-        grassInstance.transform.up = Vector3.up;
-        grassInstance.gameObject.SetActive(true);
-        GrassInstances.Add(grassInstance);
+        SetGrassTransform(grassInstance, Vector3.zero, hit);
         //mGrassInstancing.DrawInstancedProp(grassInstance);
     }
 
@@ -147,12 +144,7 @@ public class EsTools_GrassGenerateTools : EditorWindow
         GrassRoot = EditorGUILayout.ObjectField("Grass Root", GrassRoot, typeof(Transform), true) as Transform;
         EnableGrass1 = EditorGUILayout.Toggle("Enable Grass1", EnableGrass1);
         EnableGrass2 = EditorGUILayout.Toggle("Enable Grass2", EnableGrass2);
-        EnableRandomSize = EditorGUILayout.Toggle("Enable RandomSize", EnableRandomSize);
-
-        if(EnableRandomSize)
-        {
-            EditorGUILayout.MinMaxSlider(ref MinSize, ref MaxSize, 0.001f, 1f);
-        }
+        EditorGUILayout.MinMaxSlider(ref MinSize, ref MaxSize, 0.001f, 5f);
 
         if (GUILayout.Button("Clear All"))
         {

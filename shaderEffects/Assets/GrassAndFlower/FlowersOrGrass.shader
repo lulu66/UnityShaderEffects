@@ -5,11 +5,18 @@
 		_MainTex ("Texture", 2D) = "white" {}
 		_Color("Color", Color) = (1,1,1,1)
 		_MatCap("MatCap (RGB)", 2D) = "white" {}
+		_CutOff("CutOff",Range(0,1)) = 0.5
+		[Toggle(USE_WIND)]
+		_UseWind("Use Wind",float) = 0
 		[Header(WindInfo)]
 		_WindNoise("Wind Noise", 2D) = "white" {}
 		_NoiseScale("Wind Noise Scale", Float) = 1
 		_BaseSwingSpeed("Wind Base Swing Speed", Float) = 1
 		_BaseSwingAmplitude("Wind Base Swing Amplitude", Float) = 1
+		[Header(GlobalWind)]
+		_WindControl("WindControl",vector) = (1,1,1,1)
+		_WaveControl("WaveControl",vector) = (1,1,1,1)
+		[HDR]_EmissiveColor("EmissiveColor", Color) = (0,0,0,0)
 	}
 	SubShader
 	{
@@ -27,14 +34,17 @@
 			#pragma multi_compile_instancing
 			#pragma multi_compile_fwdbase
 			#pragma fragmentoption ARB_precision_hint_fastest
+			#pragma shader_feature USE_WIND
+
 			#include "UnityCG.cginc"
+			#include "Lighting.cginc"
 
 			struct appdata
 			{
 				float4 vertex : POSITION;
 				float2 uv : TEXCOORD0;
 				float3 normal : NORMAL;
-				float4 color : COLOR;
+				float4 color : COLOR;			//r:运动幅度权重 a:alpha
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
@@ -44,8 +54,9 @@
 				float4 pos : SV_POSITION;
 				float3 worldNormal : TEXCOORD1;
 				float3 worldPos : TEXCOORD2;
-				float3 worldView : TEXCOORD3;
+				float3 worldViewDir : TEXCOORD3;
 				half2 cap : TEXCOORD4;
+				half4 vertColor : TEXCOORD5;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
@@ -58,9 +69,12 @@
 			float _NoiseScale;
 			float4x4 _GlobalWorldBoundToLocalMatrix;
 			float4 _GlobalInteractiveInfo;
-
+			float4 _WindControl;
+			float4 _WaveControl;
+			fixed4 _EmissiveColor;
+			half _CutOff;
 			UNITY_INSTANCING_BUFFER_START(Props)
-				UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
+				UNITY_DEFINE_INSTANCED_PROP(fixed4, _Color)
 			UNITY_INSTANCING_BUFFER_END(Props)
 
 			v2f vert (appdata v)
@@ -79,23 +93,52 @@
 				interactiveTexcoord = 0.5 * interactiveTexcoord + 0.5;
 
 				//使用noise
-				half noiseInfo = tex2Dlod(_WindNoise, float4(_NoiseScale * interactiveTexcoord + _Time.x * _BaseSwingSpeed, 0, 0)).r;
+#if USE_WIND
+				
+				//half noiseInfo = tex2Dlod(_WindNoise, float4(_NoiseScale * interactiveTexcoord + _Time.x * _BaseSwingSpeed, 0, 0)).r;
 				//worldPos.xz += noiseInfo * _BaseSwingAmplitude * weight;
-
+				//worldPos.xz += sin(_Time.x * _BaseSwingSpeed) * _BaseSwingAmplitude * weight;
+				//half2 wind = _WindDir.xy * sin(_Time.x *  UNITY_PI * _WindSpeed * (_WindDir.x * worldPos.x + _WindDir.y * worldPos.z) / 100);
+				//worldPos.xz += wind * _WindForce * weight;
+				float2 samplePos = worldPos.xz / _WaveControl.w;
+				samplePos += _Time.x * -_WaveControl.xz;
+				fixed waveSample = tex2Dlod(_WindNoise, float4(samplePos, 0, 0)).r;
+				worldPos.x += sin(waveSample * _WindControl.x) * _WaveControl.x * _WindControl.w * v.uv.x;
+				worldPos.z += sin(waveSample * _WindControl.z) * _WaveControl.z * _WindControl.w * v.uv.y;
+#endif
 				v.vertex = mul(unity_WorldToObject, float4(worldPos.xyz, 1));
-				float3 worldNorm = normalize(unity_WorldToObject[0].xyz * v.normal.x + unity_WorldToObject[1].xyz * v.normal.y + unity_WorldToObject[2].xyz * v.normal.z);
-				o.worldNormal = worldNorm;
+				o.worldPos = worldPos;
+				o.worldNormal = UnityObjectToWorldNormal(v.normal);
+				o.worldViewDir = UnityWorldSpaceViewDir(worldPos);
 				o.pos = mul(UNITY_MATRIX_VP, half4(worldPos, 1));
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-				o.cap.xy = worldNorm.xy * 0.5 + 0.5;
+				o.cap = o.worldNormal.xy * 0.5 + 0.5;
+				o.vertColor = v.color;
 				return o;
 			}
 			
 			fixed4 frag (v2f i) : SV_Target
 			{
 				UNITY_SETUP_INSTANCE_ID(i);
+				fixed4 mainColor = tex2D(_MainTex, i.uv);
+				clip(mainColor.a - _CutOff);
 				fixed4 mc = tex2D(_MatCap, i.cap);
-				fixed4 col = tex2D(_MainTex, i.uv) * UNITY_ACCESS_INSTANCED_PROP(Props, _Color) * mc * 2;
+				//half3 worldPos = i.worldPos;
+				//half3 worldNormal = normalize(i.worldNormal);
+				//return fixed4(worldNormal,1);
+				//half3 worldViewDir = normalize(i.worldViewDir);
+				//half3 worldLightDir = normalize(UnityWorldSpaceLightDir(worldPos));
+				//half nl = saturate(dot(worldNormal, worldLightDir));
+				//half3 ambient = ShadeSH9(half4(worldNormal,1));
+				//half3 h = normalize(worldViewDir + worldLightDir);
+				//half nh = saturate(dot(h, worldNormal));
+				//half3 diffColor = nl * mainColor * _LightColor0.rgb * UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
+				//half3 specColor = pow(nh, 15) * _LightColor0.rgb;
+				half3 diffColor = mainColor.rgb * UNITY_ACCESS_INSTANCED_PROP(Props, _Color) * mc * 2;//mainColor.rgb * _LightColor0.rgb * UNITY_ACCESS_INSTANCED_PROP(Props, _Color) * nl;
+				fixed4 col = 0;
+				col.rgb = diffColor; //+ specColor + ambient;
+				col.rgb += _EmissiveColor.rgb * mainColor.rgb;
+				col.a = 1;
 				return col;
 			}
 			ENDCG

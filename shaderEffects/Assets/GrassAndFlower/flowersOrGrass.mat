@@ -8,7 +8,7 @@ Material:
   m_PrefabInternal: {fileID: 0}
   m_Name: flowersOrGrass
   m_Shader: {fileID: 4800000, guid: 2a808690aadf460458cbbccdfcdbbd21, type: 3}
-  m_ShaderKeywords: 
+  m_ShaderKeywords: USE_WIND
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -39,7 +39,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 10300, guid: 0000000000000000f000000000000000, type: 0}
+        m_Texture: {fileID: 2800000, guid: a3529c02b5fb05f40a19618aed228feb, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCap:
+        m_Texture: {fileID: 2800000, guid: 6f3774082396be44ca959fb0c628ba64, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -54,8 +58,15 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _WindNoise:
+        m_Texture: {fileID: 2800000, guid: b83fab8f559d3ee4e8550400528d485e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Floats:
+    - _BaseSwingAmplitude: 0.19
+    - _BaseSwingSpeed: 0.57
     - _BumpScale: 1
+    - _CutOff: 0.809
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -64,13 +75,21 @@ Material:
     - _GlossyReflections: 1
     - _Metallic: 0
     - _Mode: 0
+    - _NoiseScale: 5.11
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
+    - _UseWind: 1
+    - _WindForce: 0.17
+    - _WindSpeed: 6.32
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 0.25228518, g: 0.19204153, b: 0.7058823, a: 1}
+    - _Color: {r: 0, g: 0.8602941, b: 0.04153131, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _EmissiveColor: {r: 0, g: 0, b: 0, a: 0}
+    - _WaveControl: {r: 0.68, g: 0.56, b: 0.22, a: 10}
+    - _WindControl: {r: 4.86, g: 1.42, b: 5.02, a: 1}
+    - _WindDir: {r: 1.24, g: 0.65, b: 0, a: 0}

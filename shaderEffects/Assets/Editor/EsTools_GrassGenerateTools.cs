@@ -183,6 +183,8 @@ public class EsTools_GrassGenerateTools : EditorWindow
     {
         if(GrassInstances!=null)
         {
+            Debug.Log("grass num:" + GrassInstances.Count);
+
             GrassInstances.Clear();
         }
         Transform[] children = GrassRoot.GetComponentsInChildren<Transform>();

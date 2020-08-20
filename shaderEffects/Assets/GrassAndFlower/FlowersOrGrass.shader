@@ -4,7 +4,7 @@
 	{
 		_MainTex ("Texture", 2D) = "white" {}
 		_Color("Color", Color) = (1,1,1,1)
-		_MatCap("MatCap (RGB)", 2D) = "white" {}
+		_MatCap("MatCap (RGBA),A:EmissionMask", 2D) = "white" {}
 		_CutOff("CutOff",Range(0,1)) = 0.5
 		[Toggle(USE_WIND)]
 		_UseWind("Use Wind",float) = 0
@@ -14,20 +14,17 @@
 		_BaseSwingSpeed("Wind Base Swing Speed", Float) = 1
 		_BaseSwingAmplitude("Wind Base Swing Amplitude", Float) = 1
 		[Header(GlobalWind)]
-		_WindControl("WindControl",vector) = (1,1,1,1)
-		_WaveControl("WaveControl",vector) = (1,1,1,1)
+		_WindControl("WindControl",vector) = (1,1,1,1)		//xyz:在各个轴上自身的摆动速度 w:摆动强度
+		_WaveControl("WaveControl",vector) = (1,1,1,1)		//xyz:在各个轴上风浪的速度 w:控制草叶摆动是整齐还是凌乱，越大越整齐
 		[HDR]_EmissiveColor("EmissiveColor", Color) = (0,0,0,0)
 	}
 	SubShader
 	{
-		Tags { "Queue" = "Transparent" "IgnoreProjector" = "True" "LightMode" = "ForwardBase" }
+		Tags { "Queue" = "AlphaTest" "IgnoreProjector" = "True" "LightMode" = "ForwardBase" }
 
 		Pass
 		{
 			Cull Off
-			ZWrite Off
-			Blend SrcAlpha OneMinusSrcAlpha
-
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
@@ -103,8 +100,8 @@
 				float2 samplePos = worldPos.xz / _WaveControl.w;
 				samplePos += _Time.x * -_WaveControl.xz;
 				fixed waveSample = tex2Dlod(_WindNoise, float4(samplePos, 0, 0)).r;
-				worldPos.x += sin(waveSample * _WindControl.x) * _WaveControl.x * _WindControl.w * v.uv.x;
-				worldPos.z += sin(waveSample * _WindControl.z) * _WaveControl.z * _WindControl.w * v.uv.y;
+				worldPos.x += sin(waveSample * _WindControl.x) * _WaveControl.x * _WindControl.w * weight;
+				worldPos.z += sin(waveSample * _WindControl.z) * _WaveControl.z * _WindControl.w * weight;
 #endif
 				v.vertex = mul(unity_WorldToObject, float4(worldPos.xyz, 1));
 				o.worldPos = worldPos;
@@ -134,10 +131,10 @@
 				//half nh = saturate(dot(h, worldNormal));
 				//half3 diffColor = nl * mainColor * _LightColor0.rgb * UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
 				//half3 specColor = pow(nh, 15) * _LightColor0.rgb;
-				half3 diffColor = mainColor.rgb * UNITY_ACCESS_INSTANCED_PROP(Props, _Color) * mc * 2;//mainColor.rgb * _LightColor0.rgb * UNITY_ACCESS_INSTANCED_PROP(Props, _Color) * nl;
+				half3 diffColor = mainColor.rgb * UNITY_ACCESS_INSTANCED_PROP(Props, _Color) * mc.rgb * 2;//mainColor.rgb * _LightColor0.rgb * UNITY_ACCESS_INSTANCED_PROP(Props, _Color) * nl;
 				fixed4 col = 0;
 				col.rgb = diffColor; //+ specColor + ambient;
-				col.rgb += _EmissiveColor.rgb * mainColor.rgb;
+				col.rgb += _EmissiveColor.rgb * mainColor.rgb * mc.a;
 				col.a = 1;
 				return col;
 			}

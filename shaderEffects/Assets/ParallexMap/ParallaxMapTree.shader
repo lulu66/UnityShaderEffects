@@ -45,9 +45,9 @@
 				float4 TtoW0 : TEXCOORD1;
 				float4 TtoW1 : TEXCOORD2;
 				float4 TtoW2 : TEXCOORD3;
-				half3 tangentViewDir : TEXCOORD4;
+				//half3 tangentViewDir : TEXCOORD4;
 				//half3 tangentLightDir : TEXCOORD5;
-				SHADOW_COORDS(5)
+				UNITY_SHADOW_COORDS(5)
 
 			};
 
@@ -81,9 +81,9 @@
 				o.TtoW0 = float4(worldTangent.x, worldBinormal.x, worldNormal.x, worldPos.x);
 				o.TtoW1 = float4(worldTangent.y, worldBinormal.x, worldNormal.y, worldPos.y);
 				o.TtoW2 = float4(worldTangent.z, worldBinormal.z, worldNormal.z, worldPos.z);
-				o.tangentViewDir = half3(dot(worldViewDir, worldTangent.xyz), dot(worldViewDir, worldBinormal.xyz), dot(worldViewDir, worldNormal.xyz));
+				//o.tangentViewDir = half3(dot(worldViewDir, worldTangent.xyz), dot(worldViewDir, worldBinormal.xyz), dot(worldViewDir, worldNormal.xyz));
 				//o.tangentLightDir = half3(dot(worldLightDir, worldTangent.xyz), dot(worldLightDir, worldBinormal.xyz), dot(worldLightDir, worldNormal.xyz));
-				TRANSFER_SHADOW(o);
+				UNITY_TRANSFER_SHADOW(o, v.uv);
 				return o;
 			}
 			
@@ -93,22 +93,22 @@
 				half2 uv_offset = 0;
 				half height = tex2D(_HeightMap, origin_uv).r;
 				uv_offset = height * _Parallax * viewDir.xy/viewDir.z;
-				return (origin_uv + uv_offset);
+				return (origin_uv - uv_offset);
 			}
 
 			//陡峭视差贴图
 			half2 ParallaxMapping2(half2 uv, half3 viewDir)
 			{
-				half layerOffset = viewDir.xy / viewDir.z * _Parallax;
-				half2 main_uv = uv * _Tilling.xx;
+				//half layerOffset = viewDir.xy / viewDir.z * _Parallax;
+				//half2 main_uv = uv * _Tilling.xx;
 				half2 heightMap_uv = uv * _HeightMap_ST.xy + _HeightMap_ST.zw;
-				half layerNum = 20;
+				half layerNum = 50;//lerp(layerMin, layerMax, 1 - factor);
 				half layerHeight = 1 / layerNum;
 				half curHeight = 0;
 				half heightFromTexture = tex2D(_HeightMap, heightMap_uv).r;
 				half2 uv_offset = layerHeight * viewDir.xy / viewDir.z * _Parallax;
 				int i = 0;
-				while (curHeight < heightFromTexture && i < 100)
+				while (curHeight < heightFromTexture && i<100)
 				{
 					curHeight += layerHeight;
 					heightMap_uv += uv_offset;
@@ -145,14 +145,14 @@
 				half3 worldLightDir = normalize(UnityWorldSpaceLightDir(worldPos));
 				half3 worldViewDir = normalize(UnityWorldSpaceViewDir(worldPos));
 				UNITY_LIGHT_ATTENUATION(atten, i, worldPos)
-					return atten;
-				//fixed atten = SHADOW_ATTENUATION(i);
-				//half3 tangentLightDir = normalize(i.tangentLightDir);
-				//parallax 
-				half3 tangentViewDir = normalize(i.tangentViewDir);
-				half2 uv_afterOffset = ParallaxMapping4(i.uv, tangentViewDir);
-				half2 uv = i.uv;
-				//half2 uv = uv_afterOffset;
+					//half3 tangentLightDir = normalize(i.tangentLightDir);
+					//parallax 
+			
+				half3 tangentViewDir = half3(dot(worldViewDir, float3(i.TtoW0.x, i.TtoW1.x, i.TtoW2.x)), dot(worldViewDir, float3(i.TtoW0.y, i.TtoW1.y, i.TtoW2.y)), dot(worldViewDir, float3(i.TtoW0.z, i.TtoW1.z, i.TtoW2.z)));//normalize(i.tangentViewDir);
+				//tangentViewDir = normalize(tangentViewDir);
+				half2 uv_afterOffset = ParallaxMapping2(i.uv, tangentViewDir);
+				//half2 uv = i.uv;
+				half2 uv = uv_afterOffset;
 				fixed4 albedo = tex2D(_MainTex, uv);
 				half3 normal = UnpackNormal(tex2D(_NormalMap, uv)).xyz;
 				half3 worldNormal = normalize(half3(dot(i.TtoW0.xyz, normal), dot(i.TtoW1.xyz, normal), dot(i.TtoW2.xyz, normal)));
@@ -208,5 +208,8 @@
 			ENDCG
 		}
 	}
+	Fallback "Mobile/VertexLit"
 }
+
+
 

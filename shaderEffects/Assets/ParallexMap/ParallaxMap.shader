@@ -41,12 +41,13 @@
 			struct v2f
 			{
 				float2 uv : TEXCOORD0;
-				float4 vertex : SV_POSITION;
+				float4 pos : SV_POSITION;
 				float4 TtoW0 : TEXCOORD1;
 				float4 TtoW1 : TEXCOORD2;
 				float4 TtoW2 : TEXCOORD3;
 				half3 tangentViewDir : TEXCOORD4;
 				//half3 tangentLightDir : TEXCOORD5;
+				UNITY_SHADOW_COORDS(5)
 
 			};
 
@@ -67,7 +68,7 @@
 			v2f vert (appdata v)
 			{
 				v2f o;
-				o.vertex = UnityObjectToClipPos(v.vertex);
+				o.pos = UnityObjectToClipPos(v.vertex);
 				//o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
 				//o.uv.zw = TRANSFORM_TEX(v.uv, _HeightMap);
 				o.uv = v.uv;
@@ -82,6 +83,7 @@
 				o.TtoW2 = float4(worldTangent.z, worldBinormal.z, worldNormal.z, worldPos.z);
 				o.tangentViewDir = half3(dot(worldViewDir, worldTangent.xyz), dot(worldViewDir, worldBinormal.xyz), dot(worldViewDir, worldNormal.xyz));
 				//o.tangentLightDir = half3(dot(worldLightDir, worldTangent.xyz), dot(worldLightDir, worldBinormal.xyz), dot(worldLightDir, worldNormal.xyz));
+				UNITY_TRANSFER_SHADOW(o, v.uv);
 				return o;
 			}
 			
@@ -109,7 +111,7 @@
 				//half maxLayerNum = 40;
 				//half minLayerNum = 5;
 				//half factor = saturate(dot(viewDir, half3(0,1,0)));
-				half layerNum = 20;//minLayerNum * (1 - factor) + maxLayerNum * factor;
+				half layerNum = 50;//minLayerNum * (1 - factor) + maxLayerNum * factor;
 				half layerHeight = 1 / layerNum;
 				half curHeight = 0;
 				half heightFromTexture = tex2D(_HeightMap, heightMap_uv).r;
@@ -143,7 +145,7 @@
 				half3 worldPos = half3(i.TtoW0.w, i.TtoW1.w,  i.TtoW2.w);
 				half3 worldLightDir = normalize(UnityWorldSpaceLightDir(worldPos));
 				half3 worldViewDir = normalize(UnityWorldSpaceViewDir(worldPos));
-
+				UNITY_LIGHT_ATTENUATION(atten, i, worldPos)
 				//half3 tangentLightDir = normalize(i.tangentLightDir);
 				//parallax 
 				half3 tangentViewDir = normalize(i.tangentViewDir);
@@ -163,16 +165,16 @@
 				o.Albedo = albedo.rgb;
 				o.Emission = 0.0;
 				o.Alpha = albedo.a;
-				o.Occlusion = occlusion;
+				o.Occlusion = occlusion * 1;
 				o.Normal = worldNormal;
-				o.Metallic = metallic;
-				o.Smoothness = smooth;
+				o.Metallic = 0;
+				o.Smoothness = 0.25;
 
 				UnityGI gi;
 				UNITY_INITIALIZE_OUTPUT(UnityGI, gi);
 				gi.indirect.diffuse = 0;
 				gi.indirect.specular = 0;
-				gi.light.color = _LightColor0.rgb;
+				gi.light.color = _LightColor0.rgb * atten;
 				gi.light.dir = worldLightDir;
 				c = LightingStandard(o, worldViewDir, gi);
 				//c.rgb = diffcolor;
@@ -183,4 +185,5 @@
 			ENDCG
 		}
 	}
+	Fallback "Mobile/VertexLit"
 }
